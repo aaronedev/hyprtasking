@@ -125,7 +125,7 @@ std::vector<WORKSPACEID> HTLayoutBase::jump_targets() const {
         if (lhs.second.y != rhs.second.y)
             return lhs.second.y < rhs.second.y;
         if (lhs.second.x != rhs.second.x)
-            return lhs.second.x < rhs.second.x;
+            return lhs.first < rhs.first;
         return lhs.first < rhs.first;
     });
 
@@ -214,6 +214,11 @@ void HTLayoutBase::render_jump_labels() {
 const std::string CLEAR_PASS_ELEMENT_NAME = "CClearPassElement";
 
 void HTLayoutBase::post_render() {
+    // HyprGlass draws its window pane in unscaled monitor coordinates. Exclude
+    // only that pass from overview/transition frames, including dragged previews.
+    // Native decorations and HyprGlass on the normal desktop remain untouched.
+    g_pHyprRenderer->m_renderPass.removeAllOfType("CGlassPassElement");
+
     bool first = true;
     std::erase_if(g_pHyprRenderer->m_renderPass.m_passElements, [&first](const auto& e) {
         bool res = e.element->passName() == CLEAR_PASS_ELEMENT_NAME && !first;
