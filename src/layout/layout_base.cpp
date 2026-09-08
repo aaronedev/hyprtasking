@@ -125,7 +125,7 @@ std::vector<WORKSPACEID> HTLayoutBase::jump_targets() const {
         if (lhs.second.y != rhs.second.y)
             return lhs.second.y < rhs.second.y;
         if (lhs.second.x != rhs.second.x)
-            return lhs.first < rhs.first;
+            return lhs.second.x < rhs.second.x;
         return lhs.first < rhs.first;
     });
 
