@@ -61,4 +61,5 @@ with tempfile.TemporaryDirectory(prefix="hyprtasking-tests-") as directory:
         + shlex.split(flags),
         check=True,
     )
-    subprocess.run([str(binary)], check=True)
+    result = subprocess.run([str(binary)])
+    raise SystemExit(result.returncode if result.returncode >= 0 else 128 - result.returncode)

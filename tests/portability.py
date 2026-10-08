@@ -4,6 +4,7 @@
 Run: python3 tests/portability.py
 Requires Meson, Ninja, a C++23 compiler, pkg-config and plugin build dependencies.
 The compiler wrapper simulates the c++2b fallback; it is not an older compiler.
+A substituted compiler output checks runner signal propagation.
 No plugin is loaded and no cross-architecture binary is built.
 """
 
@@ -48,11 +49,27 @@ with tempfile.TemporaryDirectory(prefix="portability-", dir=BUILD) as directory:
     env["XKB_CONFIG_ROOT"] = str(empty)
     env["XKB_CONFIG_EXTRA_PATH"] = str(empty)
     result = subprocess.run(
-        ["python3", str(ROOT / "tests/handlers.py")],
+        ["python3", str(ROOT / "tests/handlers.py"), "--standard=c++2b", "--", "c++"],
         env=env, capture_output=True, text=True,
     )
-    if (result.returncode == 0
-        or "German XKB keymap must initialize" not in result.stderr
-        or "SIGSEGV" in result.stderr):
+    if (result.returncode != 1
+        or "German XKB keymap must initialize" not in result.stderr):
         raise RuntimeError("missing XKB data did not report a controlled initialization error")
-    print("compiler argument round-trip, c++2b fallback and missing XKB data: passed")
+    signal_compiler = root / "signal-compiler"
+    signal_compiler.write_text(
+        "#!/usr/bin/env python3\n"
+        "import pathlib, sys\n"
+        "p = pathlib.Path(sys.argv[sys.argv.index('-o') + 1])\n"
+        "p.write_text(\"#!/usr/bin/env python3\\nimport os, signal, sys\\n"
+        "print('German XKB keymap must initialize', file=sys.stderr, flush=True)\\n"
+        "os.kill(os.getpid(), signal.SIGTERM)\\n\")\n"
+        "p.chmod(0o755)\n"
+    )
+    signal_compiler.chmod(0o755)
+    result = subprocess.run(
+        ["python3", str(ROOT / "tests/handlers.py"), "--", str(signal_compiler)],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 143:
+        raise RuntimeError("handler runner lost the child signal exit status")
+    print("compiler arguments, c++2b fallback, XKB diagnostics and signal propagation: passed")
