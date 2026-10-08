@@ -80,6 +80,35 @@ int main() {
     check(Config::Actions::selected == 36, "XKB mapping must override physical fallback");
     xkb_state_unref(state);
     xkb_keymap_unref(keymap);
+
+    names.layout = "fr";
+    keymap = xkb_keymap_new_from_names(context, &names, XKB_KEYMAP_COMPILE_NO_FLAGS);
+    check(keymap != nullptr, "French XKB keymap must initialize");
+    state = xkb_state_new(keymap);
+    check(state != nullptr, "French XKB state must initialize");
+    keyboard->m_xkbState = state;
+    view->show();
+    check(
+        !manager.on_key({KEY_1, WL_KEYBOARD_KEY_STATE_PRESSED}),
+        "French unshifted digit position is not a jump label"
+    );
+    xkb_state_update_mask(
+        state,
+        1 << xkb_keymap_mod_get_index(keymap, XKB_MOD_NAME_SHIFT),
+        0,
+        0,
+        0,
+        0,
+        0
+    );
+    input_manager.modifiers = HL_MODIFIER_SHIFT;
+    check(
+        manager.on_key({KEY_1, WL_KEYBOARD_KEY_STATE_PRESSED}),
+        "Shift must allow typing French numeric jump labels"
+    );
+    check(Config::Actions::selected == 1, "French shifted digit must select workspace 1");
+    xkb_state_unref(state);
+    xkb_keymap_unref(keymap);
     xkb_context_unref(context);
-    std::cout << "overview reopen, shortcuts, paired releases and XKB layout: passed\n";
+    std::cout << "overview reopen, shortcuts, paired releases and XKB layouts: passed\n";
 }

@@ -46,8 +46,10 @@ shared_module(meson.project_name(), src,
   include_directories: incdir
 )
 
-# Exercise input and view lifecycle handlers without starting a compositor.
-test('overview-handlers', find_program('python3'),
-  args: files('tests/handlers.py'),
-  env: {'CXX': ' '.join(cpp_compiler.cmd_array())}
-)
+# The handler fixture compiles and runs a local binary; it has no cross-build wrapper.
+if not meson.is_cross_build()
+  test('overview-handlers', find_program('python3'),
+    args: files('tests/handlers.py'),
+    env: {'CXX': ' '.join(cpp_compiler.cmd_array())}
+  )
+endif
