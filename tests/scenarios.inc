@@ -8,7 +8,8 @@ int main() {
     other->show();
     check(manager.on_key({KEY_2, WL_KEYBOARD_KEY_STATE_PRESSED}), "plain digit must jump");
     check(
-        Config::Actions::selected == 2 && other->layout->hides == 1,
+        Config::Actions::selected == 2 && view->closing && view->layout->hides == 1
+            && other->closing && other->layout->hides == 1,
         "jump must close all active views"
     );
     view->show();
@@ -63,11 +64,13 @@ int main() {
     );
 
     auto context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+    check(context != nullptr, "XKB context must initialize");
     xkb_rule_names names {};
     names.layout = "de";
     auto keymap = xkb_keymap_new_from_names(context, &names, XKB_KEYMAP_COMPILE_NO_FLAGS);
+    check(keymap != nullptr, "German XKB keymap must initialize");
     auto state = xkb_state_new(keymap);
-    check(context && keymap && state, "German XKB fixture must initialize");
+    check(state != nullptr, "German XKB state must initialize");
     auto keyboard = std::make_shared<IKeyboard>();
     keyboard->m_xkbState = state;
     input_manager.m_keyboards = {keyboard};

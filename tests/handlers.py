@@ -7,6 +7,7 @@ Requires a C++23 compiler, pkg-config and xkbcommon and hyprutils development fi
 This does not load a plugin or verify rendering in a live Hyprland session.
 """
 
+import argparse
 import os
 from pathlib import Path
 import shlex
@@ -14,6 +15,15 @@ import subprocess
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--standard", choices=("c++23", "c++2b"), default="c++23")
+parser.add_argument("compiler", nargs=argparse.REMAINDER)
+args = parser.parse_args()
+compiler = args.compiler
+if compiler and compiler[0] == "--":
+    compiler = compiler[1:]
+if not compiler:
+    compiler = shlex.split(os.environ.get("CXX", "c++"))
 
 
 def function(path, signature):
@@ -46,8 +56,8 @@ with tempfile.TemporaryDirectory(prefix="hyprtasking-tests-") as directory:
     )
     binary = Path(directory) / "handlers"
     subprocess.run(
-        shlex.split(os.environ.get("CXX", "c++"))
-        + ["-std=c++23", "-Wall", "-Wextra", "-Wno-unused-parameter", str(source), "-o", str(binary)]
+        compiler
+        + ["-std=" + args.standard, "-Wall", "-Wextra", "-Wno-unused-parameter", str(source), "-o", str(binary)]
         + shlex.split(flags),
         check=True,
     )
