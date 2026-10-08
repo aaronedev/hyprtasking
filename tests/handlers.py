@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Exercise production handlers with substitutes for compositor IPC and rendering.
 
-Run: python3 tests/handlers.py
+Run in a native build: python3 tests/handlers.py
+Meson skips this fixture when cross compiling.
 Requires a C++23 compiler, pkg-config and xkbcommon and hyprutils development files.
 This does not load a plugin or verify rendering in a live Hyprland session.
 """

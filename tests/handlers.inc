@@ -15,6 +15,7 @@ using WORKSPACEID = long;
 constexpr WORKSPACEID WORKSPACE_INVALID = -1;
 constexpr unsigned WL_KEYBOARD_KEY_STATE_RELEASED = 0;
 constexpr unsigned WL_KEYBOARD_KEY_STATE_PRESSED = 1;
+constexpr unsigned HL_MODIFIER_SHIFT = 1 << 0;
 constexpr unsigned HL_MODIFIER_CTRL = 1 << 2;
 constexpr unsigned HL_MODIFIER_ALT = 1 << 3;
 constexpr unsigned HL_MODIFIER_META = 1 << 6;
