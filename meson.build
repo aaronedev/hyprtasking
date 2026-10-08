@@ -45,3 +45,9 @@ shared_module(meson.project_name(), src,
   install: true,
   include_directories: incdir
 )
+
+# Exercise input and view lifecycle handlers without starting a compositor.
+test('overview-handlers', find_program('python3'),
+  args: files('tests/handlers.py'),
+  env: {'CXX': ' '.join(cpp_compiler.cmd_array())}
+)
