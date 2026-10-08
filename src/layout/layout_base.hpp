@@ -77,8 +77,9 @@ class HTLayoutBase {
     // Render the overview
     virtual void render();
 
-    // Workspaces in the same visual order used by the keyboard jump labels.
-    std::vector<WORKSPACEID> jump_targets() const;
+    // Workspace for the jump label at index (0-based), or nullopt when nothing
+    // maps to that label. Labels are tied to workspace numbers, not tile
+    // positions, so the result does not depend on the view or layer.
     std::optional<WORKSPACEID> jump_target(size_t index) const;
 
     // Prevent simplification from happening in the plugin, remove all clear pass objects

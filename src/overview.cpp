@@ -6,6 +6,7 @@
 #include <hyprland/src/desktop/state/GlobalWindowController.hpp>
 #include <hyprland/src/macros.hpp>
 #include <hyprland/src/managers/input/InputManager.hpp>
+#include <hyprland/src/config/shared/actions/ConfigActions.hpp>
 #include <hyprland/src/pointer/cursor/CursorShapeOverrideController.hpp>
 #include <hyprland/src/render/OpenGL.hpp>
 #include <hyprland/src/render/Renderer.hpp>
@@ -113,7 +114,12 @@ void HTView::hide(bool exit_on_mouse, std::optional<WORKSPACEID> target_workspac
             workspace = State::workspaceState()->create(*target_workspace, monitor->m_id);
         if (workspace == nullptr)
             return;
-        monitor->changeWorkspace(workspace);
+        // Route through the compositor action so a workspace belonging to
+        // another monitor is focused there, with the same focus/cursor
+        // behavior as the workspace keybinds, instead of being pinned to the
+        // cursor's monitor.
+        if (!Config::Actions::changeWorkspace(workspace).has_value())
+            Log::logger->log(Log::WARN, "[Hyprtasking] Failed to jump to workspace {}", *target_workspace);
     } else {
         do_exit_behavior(exit_on_mouse);
     }

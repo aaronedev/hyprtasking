@@ -11,6 +11,7 @@
 #include <hyprland/src/render/Renderer.hpp>
 #include <hyprland/src/render/pass/ClearPassElement.hpp>
 #include <hyprland/src/state/WorkspaceState.hpp>
+#include <hyprland/src/config/shared/workspace/WorkspaceRuleManager.hpp>
 #include <hyprland/src/render/pass/RectPassElement.hpp>
 #include <hyprland/src/render/pass/TexPassElement.hpp>
 #undef private
@@ -115,32 +116,45 @@ void HTLayoutBase::render() {
     g_pHyprRenderer->m_renderPass.add(makeUnique<CClearPassElement>(data));
 }
 
-std::vector<WORKSPACEID> HTLayoutBase::jump_targets() const {
-    std::vector<std::pair<WORKSPACEID, HTWorkspace>> ordered;
-    ordered.reserve(overview_layout.size());
-    for (const auto& entry : overview_layout)
-        ordered.push_back(entry);
+// Jump labels follow workspace numbers instead of tile order: 1-9 keep their
+// digits, 10 becomes 0, and the remaining monitor chunks continue through the
+// alphabet (a-z for 11-36), so a label always points at the same workspace
+// regardless of which view or layer shows it.
+static constexpr std::string_view JUMP_LABELS = "1234567890abcdefghijklmnopqrstuvwxyz";
 
-    std::sort(ordered.begin(), ordered.end(), [](const auto& lhs, const auto& rhs) {
-        if (lhs.second.y != rhs.second.y)
-            return lhs.second.y < rhs.second.y;
-        if (lhs.second.x != rhs.second.x)
-            return lhs.second.x < rhs.second.x;
-        return lhs.first < rhs.first;
-    });
+// A workspace is addressable when it exists or when a workspace rule binds its
+// number to a connected monitor. Synthesized filler slots therefore stay
+// unlabeled and cannot be jumped to.
+static std::optional<char> jump_label_for(WORKSPACEID workspace_id) {
+    if (workspace_id < 1 || static_cast<size_t>(workspace_id) > JUMP_LABELS.size())
+        return std::nullopt;
 
-    std::vector<WORKSPACEID> result;
-    result.reserve(ordered.size());
-    for (const auto& entry : ordered)
-        result.push_back(entry.first);
-    return result;
+    if (State::workspaceState()->query().id(workspace_id).run() == nullptr) {
+        bool bound = false;
+        for (const auto& rule : Config::workspaceRuleMgr()->getAllWorkspaceRules()) {
+            if (rule == nullptr || !rule->isEnabled() || rule->m_workspaceId != workspace_id)
+                continue;
+            const std::string& name = rule->m_workspaceName;
+            bound = Config::workspaceRuleMgr()->getBoundMonitorForWS(
+                        name.starts_with("name:") ? name.substr(5) : name
+                    ) != nullptr;
+            break;
+        }
+        if (!bound)
+            return std::nullopt;
+    }
+
+    return JUMP_LABELS[static_cast<size_t>(workspace_id) - 1];
 }
 
 std::optional<WORKSPACEID> HTLayoutBase::jump_target(size_t index) const {
-    const auto targets = jump_targets();
-    if (index >= targets.size())
+    if (index >= JUMP_LABELS.size())
         return std::nullopt;
-    return targets[index];
+
+    const WORKSPACEID target = static_cast<WORKSPACEID>(index) + 1;
+    if (!jump_label_for(target).has_value())
+        return std::nullopt;
+    return target;
 }
 
 void HTLayoutBase::render_jump_labels() {
@@ -152,10 +166,6 @@ void HTLayoutBase::render_jump_labels() {
     if (view == nullptr || monitor == nullptr || !view->active || view->closing)
         return;
 
-    static constexpr std::string_view LABELS = "1234567890abcdefghijklmnopqrstuvwxyz";
-    const auto targets = jump_targets();
-    const size_t count = std::min(targets.size(), LABELS.size());
-
     const int font_size = std::max(
         1,
         static_cast<int>(HTConfig::value<Config::INTEGER>("jump:label_size") * monitor->m_scale)
@@ -166,23 +176,23 @@ void HTLayoutBase::render_jump_labels() {
     const CHyprColor background_color {HTConfig::value<Config::INTEGER>("jump:label_background")};
     const CBox monitor_box {{0, 0}, monitor->m_transformedSize};
 
-    for (size_t i = 0; i < count; i++) {
-        const auto layout_it = overview_layout.find(targets[i]);
-        if (layout_it == overview_layout.end())
+    for (const auto& [workspace_id, workspace] : overview_layout) {
+        const std::optional<char> label = jump_label_for(workspace_id);
+        if (!label.has_value())
             continue;
-        const CBox& workspace_box = layout_it->second.box;
+        const CBox& workspace_box = workspace.box;
         if (workspace_box.intersection(monitor_box).empty())
             continue;
 
         // Text rasterization is relatively expensive and these glyphs are immutable for a
         // given scale/color, so retain one texture per rendered label style.
         static std::unordered_map<std::string, SP<Render::ITexture>> texture_cache;
-        const std::string texture_key = std::string(1, LABELS[i]) + ":" + std::to_string(font_size)
+        const std::string texture_key = std::string(1, *label) + ":" + std::to_string(font_size)
             + ":" + std::to_string(label_color_value);
         auto& texture = texture_cache[texture_key];
         if (texture == nullptr) {
             texture = g_pHyprRenderer->renderText(
-                std::string(1, LABELS[i]),
+                std::string(1, *label),
                 label_color,
                 font_size,
                 false,

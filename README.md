@@ -113,8 +113,9 @@ hyprctl plugin load "$(realpath libhyprtasking.so)"
 - Workspace Transitioning:
     - Open the overlay, then use **right click** to switch to a workspace
     - Use the directional dispatchers `hyprtasking:move` to switch to a workspace
-    - With `jump.enabled` enabled, press the label shown over a workspace to jump to it
-      (`1`-`9`, `0`, then `a`-`z`)
+    - With `jump.enabled` enabled, press the label shown over a workspace to jump to it:
+      labels follow the workspace number (`1`-`9` for 1-9, `0` for 10), and the workspaces
+      of the other monitor chunks continue through the alphabet (`a`-`z` for 11-36)
 - Window management:
     - **Left click** to drag and drop windows around
 
